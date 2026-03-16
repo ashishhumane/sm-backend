@@ -1,0 +1,84 @@
+datasource db {
+  provider = "mongodb"
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId //here we are using mongodb so we have to use @db.ObjectId and also we have to map it to _id because mongodb uses _id as primary key
+  name      String
+  username  String   @unique
+  email     String   @unique
+  password  String
+  posts     Post[] //this line create a relation with post model
+  followers Follow[] @relation("Following") //this line create a relation with follow model for followers
+  following Follow[] @relation("Follower") //this line create a relation with follow model for following
+  likes     Like[] //this line create a relation with like model for likes
+  profile   Profile? //this line create a relation with profile model for one to one relation
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Post {
+  id        String    @id @default(auto()) @map("_id") @db.ObjectId
+  title     String
+  content   String
+  author    User      @relation(fields: [authorId], references: [id]) //this line create a relation 
+  authorId  String    @db.ObjectId //and this line stores the relation id also called foreign key
+  comments  Comment[] //this line create a relation with comment model
+  likes     Like[] //this line create a relation with like model
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+}
+
+// there is a one to many relation between user and post because one user can have many posts but one post can have only one user as author
+
+model Comment {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  content   String
+  post      Post     @relation(fields: [postId], references: [id])
+  postId    String   @db.ObjectId
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// here there is a one to many relation between post and comment because one post can have many comments but one comment can belong to only one post
+
+model Like {
+  id String @id @default(auto()) @map("_id") @db.ObjectId
+
+  userId String @db.ObjectId
+  postId String @db.ObjectId
+
+  user User @relation(fields: [userId], references: [id]) //this line create a relation with user model who liked the post
+  post Post @relation(fields: [postId], references: [id]) //this line create a relation with post model which is liked by the user
+
+  createdAt DateTime @default(now())
+
+  @@unique([userId, postId]) // this line ensures that a user can like a post only once
+}
+
+model Follow {
+  id String @id @default(auto()) @map("_id") @db.ObjectId
+
+  followerId  String @db.ObjectId
+  followingId String @db.ObjectId
+
+  follower  User @relation("Follower", fields: [followerId], references: [id]) //this line create a relation with user model who is following
+  following User @relation("Following", fields: [followingId], references: [id]) //this line create a relation with user model who is being followed
+
+  createdAt DateTime @default(now())
+
+  @@unique([followerId, followingId]) // this line ensures that a user can follow another user only once
+}
+
+model Profile {
+  id     String  @id @default(auto()) @map("_id") @db.ObjectId
+  bio    String?
+  avatar String?
+
+  userId String @unique @db.ObjectId
+  user   User   @relation(fields: [userId], references: [id])
+}
